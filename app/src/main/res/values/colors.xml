@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand colors -->
+    <color name="primary">#1B8F6E</color>
+    <color name="primary_dark">#157A5D</color>
+    <color name="primary_light">#4DB89A</color>
+    <color name="accent">#FF6B6B</color>
+
+    <!-- Background / Surface -->
+    <color name="background">#F6F7FB</color>
+    <color name="surface">#FFFFFF</color>
+
+    <!-- Text colors -->
+    <color name="text_primary">#1A1C22</color>
+    <color name="text_secondary">#6B7280</color>
+    <color name="text_hint">#9CA3AF</color>
+    <color name="time_sent">#B8E0D4</color>
+
+    <!-- Message bubbles -->
+    <color name="bubble_received">#E8EEF1</color>
+
+    <!-- Standard -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+</resources>

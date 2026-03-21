@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">QuickChat</string>
+    <string name="no_conversations">No conversations yet</string>
+    <string name="hint_type_message">Type a message…</string>
+    <string name="send">Send</string>
+</resources>
