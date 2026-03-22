@@ -125,15 +125,18 @@ EOF
                                             // Déterminer le chemin du fichier de test
                                             def testFileName = "${className}Test.kt"
                                             
-                                            // Créer le chemin de test (remplacer main par test)
+                                            // Créer le chemin de test en miroir (remplacer main par test)
                                             def testFilePath = file.replace('/main/', '/test/')
                                                                    .replace('.kt', 'Test.kt')
                                                                    .replace('.java', 'Test.java')
                                             
                                             echo "📁 Création du fichier: ${testFilePath}"
                                             
-                                            // Créer les dossiers si nécessaire
-                                            sh "mkdir -p \$(dirname ${testFilePath})"
+                                            // Créer TOUS les dossiers parents nécessaires (y compris util/)
+                                            sh """
+                                                mkdir -p \$(dirname ${testFilePath})
+                                                echo "✅ Dossiers créés: \$(dirname ${testFilePath})"
+                                            """
                                             
                                             // Écrire le fichier de test
                                             writeFile file: testFilePath, text: testCode
@@ -153,12 +156,15 @@ EOF
                                             // Push automatique vers GitHub
                                             try {
                                                 sh """
-                                                    git push origin main || echo "Push échoué (normal si pas de nouveaux commits)"
+                                                    # Si en detached HEAD, checkout main d'abord
+                                                    git checkout main || git checkout -b main
+                                                    git push origin main || echo "Push échoué"
                                                 """
                                                 echo "🚀 Test pushé vers GitHub"
                                             } catch (Exception pushError) {
                                                 echo "⚠️  Push impossible: ${pushError.message}"
-                                                echo "💡 Le test est commité localement, push manuel possible"
+                                                echo "💡 Le test est commité localement dans Jenkins workspace"
+                                                echo "💡 Chemin: /var/lib/jenkins/workspace/SmartTalk-Android-Tests/${testFilePath}"
                                             }
                                             
                                             // Extraire et afficher les métriques
