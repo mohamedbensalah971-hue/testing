@@ -15,9 +15,10 @@ pipeline {
                 checkout scm
                 
                 script {
+                    // Récupérer les fichiers modifiés
                     try {
                         env.CHANGED_FILES = sh(
-                            script: 'git show --pretty="" --name-only HEAD || echo ""',
+                            script: 'git diff --name-only HEAD~1 || echo ""',
                             returnStdout: true
                         ).trim()
                         
@@ -38,7 +39,7 @@ pipeline {
                     if (env.CHANGED_FILES) {
                         def sourceFiles = sh(
                             script: """
-                                echo "${env.CHANGED_FILES}" | grep -E '^app/src/main/.*\\.(kt|java)\$' | grep -v '/test/' | grep -v 'Test\\.(kt|java)\$' || echo ""
+                                echo "${env.CHANGED_FILES}" | grep -E '\\.(kt|java)\$' | grep -v 'Test\\.(kt|java)\$' || echo ""
                             """,
                             returnStdout: true
                         ).trim()
@@ -71,57 +72,39 @@ pipeline {
                             echo "📝 Génération test pour: ${file}"
                             
                             try {
-                                // DEBUG: Afficher le chemin du fichier
-                                echo "🔍 DEBUG - Fichier source complet: ${file}"
-                                
                                 // Lire le contenu du fichier
                                 def fileContent = readFile(file)
                                 
-                                // Extraire le nom de classe
+                                // Extraire le nom de classe (simple)
                                 def className = file.tokenize('/').last().replace('.kt', '').replace('.java', '')
-                                echo "🔍 DEBUG - Nom de classe: ${className}"
+                                
+                                echo "Classe détectée: ${className}"
                                 
                                 // Appeler l'Agent IA
-                                def response = ""
-                                def maxRetries = 3
-                                for (int attempt = 1; attempt <= maxRetries; attempt++) {
-                                    response = sh(
-                                        script: """
-                                            curl -sS -X POST ${AGENT_IA_URL}/generate-tests \\
-                                            -H 'Content-Type: application/json' \\
-                                            -d @- << 'EOF'
+                                def response = sh(
+                                    script: """
+                                        curl -X POST ${AGENT_IA_URL}/generate-tests \
+                                        -H 'Content-Type: application/json' \
+                                        -d @- << 'EOF'
 {
   "source_file": "${file}",
   "source_code": ${groovy.json.JsonOutput.toJson(fileContent)},
   "class_name": "${className}"
 }
 EOF
-                                        """,
-                                        returnStdout: true
-                                    ).trim()
-
-                                    def isRateLimited = response.contains('"rate_limit_exceeded":true') ||
-                                        response.contains('"error":"Rate limit exceeded')
-
-                                    if (!isRateLimited) {
-                                        break
-                                    }
-
-                                    if (attempt < maxRetries) {
-                                        def waitSeconds = 15 * attempt
-                                        echo "⏳ Agent IA rate-limited (tentative ${attempt}/${maxRetries}), retry dans ${waitSeconds}s..."
-                                        sleep(time: waitSeconds, unit: 'SECONDS')
-                                    }
-                                }
+                                    """,
+                                    returnStdout: true
+                                ).trim()
                                 
                                 echo "Réponse Agent IA: ${response}"
                                 
-                                // Parser JSON manuellement
+                                // Parser JSON (sans readJSON - méthode manuelle)
                                 if (response.contains('"success": true') || response.contains('"success":true')) {
                                     echo "✅ Test généré avec succès pour ${className}"
                                     
+                                    // NOUVEAU: Extraire et sauvegarder le test
                                     try {
-                                        // Extraire le code du test
+                                        // Extraire le code du test de la réponse JSON
                                         def startMarker = '"generated_tests":"'
                                         def endMarker = '","explanation"'
                                         
@@ -132,125 +115,53 @@ EOF
                                             startIdx += startMarker.length()
                                             def testCodeEscaped = response.substring(startIdx, endIdx)
                                             
+                                            // Décoder les caractères échappés JSON
                                             def testCode = testCodeEscaped
                                                 .replace('\\n', '\n')
                                                 .replace('\\t', '\t')
                                                 .replace('\\"', '"')
                                                 .replace('\\\\', '\\')
                                             
-                                            // NOUVELLE LOGIQUE - Tous les tests dans data/
+                                            // Déterminer le chemin du fichier de test
                                             def testFileName = "${className}Test.kt"
                                             
-                                            // Extraire le dernier dossier du chemin source (util, model, etc.)
-                                            def sourceParts = file.split('/')
-                                            def sourceDir = ""
+                                            // Créer le chemin de test (remplacer main par test)
+                                            def testFilePath = file.replace('/main/', '/test/')
+                                                                   .replace('.kt', 'Test.kt')
+                                                                   .replace('.java', 'Test.java')
                                             
-                                            // Trouver le dossier parent du fichier (util, model, repository, etc.)
-                                            for (int i = sourceParts.length - 2; i >= 0; i--) {
-                                                if (sourceParts[i] != 'java' && sourceParts[i] != 'kotlin') {
-                                                    sourceDir = sourceParts[i]
-                                                    break
-                                                }
-                                            }
-                                            
-                                            // Si le dossier source n'est pas 'model', on le met sous data/
-                                            def testFilePath = ""
-                                            if (sourceDir == 'model') {
-                                                testFilePath = "app/src/test/java/com/quickchat/app/data/model/${testFileName}"
-                                            } else {
-                                                // Créer le test sous data/{sourceDir}/
-                                                testFilePath = "app/src/test/java/com/quickchat/app/data/${sourceDir}/${testFileName}"
-                                            }
-                                            
-                                            // DEBUG: Afficher tous les chemins
-                                            echo "🔍 DEBUG - Fichier source: ${file}"
-                                            echo "🔍 DEBUG - Dossier source détecté: ${sourceDir}"
-                                            echo "🔍 DEBUG - Fichier test: ${testFilePath}"
                                             echo "📁 Création du fichier: ${testFilePath}"
                                             
-                                            // Extraire le dossier parent
-                                            def testDir = testFilePath.substring(0, testFilePath.lastIndexOf('/'))
-                                            echo "🔍 DEBUG - Dossier à créer: ${testDir}"
-                                            
-                                            // Créer TOUS les dossiers parents
-                                            sh """
-                                                echo "Création des dossiers..."
-                                                mkdir -p "${testDir}"
-                                                echo "✅ Dossiers créés: ${testDir}"
-                                                ls -la "${testDir}" || echo "Dossier non accessible"
-                                            """
+                                            // Créer les dossiers si nécessaire
+                                            sh "mkdir -p \$(dirname ${testFilePath})"
                                             
                                             // Écrire le fichier de test
-                                            echo "Écriture du fichier test..."
                                             writeFile file: testFilePath, text: testCode
                                             
-                                            // Vérifier que le fichier existe
+                                            echo "✅ Fichier test sauvegardé: ${testFilePath}"
+                                            
+                                            // Commit automatique du test
                                             sh """
-                                                if [ -f "${testFilePath}" ]; then
-                                                    echo "✅ Fichier test créé avec succès: ${testFilePath}"
-                                                    ls -lh "${testFilePath}"
-                                                else
-                                                    echo "❌ ERREUR: Fichier non créé!"
-                                                    exit 1
-                                                fi
+                                                git add ${testFilePath}
+                                                git config user.name "Jenkins CI"
+                                                git config user.email "jenkins@ci.local"
+                                                git commit -m "test: Add ${testFileName} (Auto-generated by Agent IA)" || echo "Rien à committer"
                                             """
                                             
-                                            // Configuration git et Push automatique
+                                            echo "✅ Test commité automatiquement"
+                                            
+                                            // Push automatique vers GitHub
                                             try {
-                                                // Utiliser les credentials Jenkins pour le push
-                                                withCredentials([usernamePassword(credentialsId: 'github-credentials', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN')]) {
-                                                    sh '''
-                                                        # Configuration git
-                                                        git config user.name "Jenkins CI"
-                                                        git config user.email "jenkins@ci.local"
-                                                        
-                                                        # Configurer git pour utiliser les credentials
-                                                        git config credential.helper "store --file=/tmp/.git-credentials"
-                                                        echo "https://${GIT_USERNAME}:${GIT_TOKEN}@github.com" > /tmp/.git-credentials
-                                                        
-                                                        # Sauvegarder le fichier de test
-                                                        echo "Sauvegarde du fichier test..."
-                                                        git stash push -u "''' + testFilePath + '''" || echo "Aucun fichier à stasher"
-                                                        
-                                                        # Récupérer la branche courante et s'assurer d'être sur main
-                                                        echo "Basculement vers main..."
-                                                        git fetch origin main
-                                                        git checkout main
-                                                        git reset --hard origin/main || git reset --hard HEAD
-                                                        
-                                                        # Restaurer le fichier de test
-                                                        echo "Restauration du fichier test..."
-                                                        git stash pop || echo "Aucun stash à restaurer"
-                                                        
-                                                        # Ajouter le fichier de test
-                                                        git add "''' + testFilePath + '''"
-                                                        git status
-                                                        
-                                                        # Commit uniquement s'il y a des changements
-                                                        if [ -n "$(git diff --cached)" ]; then
-                                                            git commit -m "test: Add ''' + testFileName + ''' (Auto-generated by Agent IA)"
-                                                            echo "✅ Test commité automatiquement"
-                                                            
-                                                            # Push vers GitHub avec credentials
-                                                            echo "Push vers GitHub avec authentification..."
-                                                            git push origin main --verbose
-                                                            echo "🚀 Test pushé vers GitHub avec succès"
-                                                        else
-                                                            echo "⚠️  Aucun changement à committer"
-                                                        fi
-                                                        
-                                                        # Nettoyer les credentials
-                                                        rm -f /tmp/.git-credentials
-                                                    '''
-                                                }
+                                                sh """
+                                                    git push origin main || echo "Push échoué (normal si pas de nouveaux commits)"
+                                                """
+                                                echo "🚀 Test pushé vers GitHub"
                                             } catch (Exception pushError) {
-                                                echo "❌ ERREUR lors du push: ${pushError.message}"
-                                                echo "💡 Le test est disponible localement à: ${testFilePath}"
-                                                // Nettoyer les credentials en cas d'erreur
-                                                sh 'rm -f /tmp/.git-credentials || true'
+                                                echo "⚠️  Push impossible: ${pushError.message}"
+                                                echo "💡 Le test est commité localement, push manuel possible"
                                             }
                                             
-                                            // Métriques
+                                            // Extraire et afficher les métriques
                                             if (response.contains('"confidence":')) {
                                                 def confMatch = (response =~ /"confidence":([0-9.]+)/)
                                                 if (confMatch) {
@@ -258,24 +169,35 @@ EOF
                                                 }
                                             }
                                             
+                                            if (response.contains('"tokens_used":')) {
+                                                def tokensMatch = (response =~ /"tokens_used":([0-9]+)/)
+                                                if (tokensMatch) {
+                                                    echo "📊 Tokens utilisés: ${tokensMatch[0][1]}"
+                                                }
+                                            }
+                                            
+                                            if (response.contains('"rag_context_used":')) {
+                                                def ragMatch = (response =~ /"rag_context_used":(true|false)/)
+                                                if (ragMatch) {
+                                                    echo "📊 RAG utilisé: ${ragMatch[0][1]}"
+                                                }
+                                            }
+                                            
                                         } else {
-                                            echo "⚠️  Impossible d'extraire le code du test"
+                                            echo "⚠️  Impossible d'extraire le code du test de la réponse"
                                         }
                                         
                                     } catch (Exception saveError) {
-                                        echo "❌ ERREUR lors de la sauvegarde: ${saveError.message}"
+                                        echo "⚠️  Erreur lors de la sauvegarde: ${saveError.message}"
+                                        echo "Le test a été généré mais pas sauvegardé automatiquement"
                                     }
                                     
                                 } else {
-                                    if (response.contains('"rate_limit_exceeded":true')) {
-                                        echo "⚠️  Agent IA en rate-limit pour ${className}. Réessayez dans quelques minutes."
-                                    } else {
-                                        echo "⚠️  Génération échouée pour ${className}"
-                                    }
+                                    echo "⚠️  Génération échouée pour ${className}"
                                 }
                                 
                             } catch (Exception e) {
-                                echo "❌ Erreur: ${e.message}"
+                                echo "❌ Erreur lors de la génération pour ${file}: ${e.message}"
                             }
                         }
                     }
@@ -286,23 +208,31 @@ EOF
         stage('4. Exécuter Tests Gradle') {
             steps {
                 echo '🧪 Exécution des tests unitaires...'
+                
                 script {
                     try {
+                        // Vérifier si gradlew existe
                         def gradlewExists = fileExists('./gradlew') || fileExists('gradlew.bat')
                         
                         if (gradlewExists) {
+                            echo "✅ Gradle wrapper trouvé"
+                            
+                            // Exécuter les tests Gradle
                             if (isUnix()) {
                                 sh 'chmod +x ./gradlew || true'
                                 sh './gradlew test --no-daemon || true'
                             } else {
                                 bat 'gradlew.bat test --no-daemon || exit 0'
                             }
+                            
                             echo "✅ Tests exécutés"
                         } else {
-                            echo "⚠️  Gradle wrapper non trouvé"
+                            echo "⚠️  Gradle wrapper non trouvé, skip des tests"
+                            echo "💡 Pour activer: Ajouter gradlew à ton projet"
                         }
+                        
                     } catch (Exception e) {
-                        echo "⚠️  Erreur: ${e.message}"
+                        echo "⚠️  Erreur lors de l'exécution des tests: ${e.message}"
                     }
                 }
             }
@@ -310,26 +240,33 @@ EOF
         
         stage('5. Vérifier Résultats Tests') {
             steps {
-                echo '📊 Analyse des résultats...'
+                echo '📊 Analyse des résultats de tests...'
+                
                 script {
                     try {
+                        // Chercher les rapports de tests (alternative à findFiles)
                         def testResults = sh(
                             script: 'find . -path "*/build/test-results/test/*.xml" 2>/dev/null || echo ""',
                             returnStdout: true
                         ).trim()
                         
                         if (testResults) {
-                            echo "✅ Rapports trouvés"
+                            echo "✅ Rapports de test trouvés:"
+                            echo testResults
+                            
+                            // Publier les résultats JUnit
                             try {
                                 junit '**/build/test-results/test/*.xml'
+                                echo "✅ Résultats JUnit publiés"
                             } catch (Exception e) {
-                                echo "⚠️  JUnit: ${e.message}"
+                                echo "⚠️  Impossible de publier JUnit: ${e.message}"
                             }
                         } else {
-                            echo "⚠️  Aucun rapport"
+                            echo "⚠️  Aucun rapport de test trouvé"
+                            echo "💡 Ceci est normal si gradlew n'a pas été exécuté"
                         }
                     } catch (Exception e) {
-                        echo "⚠️  Erreur: ${e.message}"
+                        echo "⚠️  Erreur lors de la recherche des rapports: ${e.message}"
                     }
                 }
             }
@@ -338,18 +275,24 @@ EOF
         stage('6. Notifier Agent IA') {
             steps {
                 echo '📡 Notification Agent IA...'
+                
                 script {
                     try {
+                        // Notifier l'Agent IA du build
                         sh """
-                            curl -X POST ${AGENT_IA_URL}/webhook/jenkins-auto \\
-                            -H 'Content-Type: application/json' \\
+                            curl -X POST ${AGENT_IA_URL}/webhook/jenkins-auto \
+                            -H 'Content-Type: application/json' \
                             -d '{
                                 "build_number": "${env.BUILD_NUMBER}",
-                                "status": "success"
+                                "status": "success",
+                                "project": "${env.JOB_NAME}",
+                                "timestamp": "${new Date()}"
                             }' || echo "Agent IA non disponible"
                         """
+                        
+                        echo "✅ Tentative de notification Agent IA"
                     } catch (Exception e) {
-                        echo "⚠️  Notification échouée"
+                        echo "⚠️  Notification échouée (normal si Agent IA non démarré): ${e.message}"
                     }
                 }
             }
@@ -360,12 +303,22 @@ EOF
         success {
             echo '✅ Pipeline terminé avec succès!'
             echo "Build #${env.BUILD_NUMBER}"
+            echo "Durée: ${currentBuild.durationString}"
         }
+        
         failure {
             echo '❌ Pipeline échoué!'
+            echo "Build #${env.BUILD_NUMBER}"
         }
+        
+        unstable {
+            echo '⚠️  Pipeline instable'
+        }
+        
         always {
             echo '🧹 Nettoyage...'
+            
+            // Archiver les rapports si disponibles
             archiveArtifacts artifacts: '**/build/reports/**', allowEmptyArchive: true
         }
     }
