@@ -7,7 +7,7 @@ package com.quickchat.app.util
  * @return The trimmed message if valid, or null if it should be rejected.
  * 
  * Updated: Added max length validation
- * test 1
+ * test 2
  */
 fun validateMessage(text: String): String? {
     val trimmed = text.trim()
