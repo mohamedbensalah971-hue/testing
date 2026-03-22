@@ -191,11 +191,19 @@ EOF
                                                         git config credential.helper "store --file=/tmp/.git-credentials"
                                                         echo "https://${GIT_USERNAME}:${GIT_TOKEN}@github.com" > /tmp/.git-credentials
                                                         
+                                                        # Sauvegarder le fichier de test
+                                                        echo "Sauvegarde du fichier test..."
+                                                        git stash push -u "''' + testFilePath + '''" || echo "Aucun fichier à stasher"
+                                                        
                                                         # Récupérer la branche courante et s'assurer d'être sur main
-                                                        echo "Rebase sur main pour ajouter le commit..."
+                                                        echo "Basculement vers main..."
                                                         git fetch origin main
                                                         git checkout main
                                                         git reset --hard origin/main || git reset --hard HEAD
+                                                        
+                                                        # Restaurer le fichier de test
+                                                        echo "Restauration du fichier test..."
+                                                        git stash pop || echo "Aucun stash à restaurer"
                                                         
                                                         # Ajouter le fichier de test
                                                         git add "''' + testFilePath + '''"
@@ -220,7 +228,6 @@ EOF
                                                 }
                                             } catch (Exception pushError) {
                                                 echo "❌ ERREUR lors du push: ${pushError.message}"
-                                                pushError.printStackTrace()
                                                 echo "💡 Le test est disponible localement à: ${testFilePath}"
                                                 // Nettoyer les credentials en cas d'erreur
                                                 sh 'rm -f /tmp/.git-credentials || true'
@@ -240,7 +247,6 @@ EOF
                                         
                                     } catch (Exception saveError) {
                                         echo "❌ ERREUR lors de la sauvegarde: ${saveError.message}"
-                                        saveError.printStackTrace()
                                     }
                                     
                                 } else {
@@ -249,7 +255,6 @@ EOF
                                 
                             } catch (Exception e) {
                                 echo "❌ Erreur: ${e.message}"
-                                e.printStackTrace()
                             }
                         }
                     }
