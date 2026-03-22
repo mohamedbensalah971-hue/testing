@@ -121,30 +121,34 @@ EOF
                                                 .replace('\\"', '"')
                                                 .replace('\\\\', '\\')
                                             
-                                            // NOUVELLE LOGIQUE - Construire le chemin test en miroir
+                                            // NOUVELLE LOGIQUE - Tous les tests dans data/
                                             def testFileName = "${className}Test.kt"
                                             
-                                            // Méthode robuste: parser le chemin
-                                            def parts = file.split('/')
-                                            def newParts = []
+                                            // Extraire le dernier dossier du chemin source (util, model, etc.)
+                                            def sourceParts = file.split('/')
+                                            def sourceDir = ""
                                             
-                                            for (part in parts) {
-                                                if (part == 'main') {
-                                                    newParts.add('test')
-                                                } else if (part.endsWith('.kt')) {
-                                                    newParts.add(part.replace('.kt', 'Test.kt'))
-                                                } else if (part.endsWith('.java')) {
-                                                    newParts.add(part.replace('.java', 'Test.java'))
-                                                } else {
-                                                    newParts.add(part)
+                                            // Trouver le dossier parent du fichier (util, model, repository, etc.)
+                                            for (int i = sourceParts.length - 2; i >= 0; i--) {
+                                                if (sourceParts[i] != 'java' && sourceParts[i] != 'kotlin') {
+                                                    sourceDir = sourceParts[i]
+                                                    break
                                                 }
                                             }
                                             
-                                            def testFilePath = newParts.join('/')
+                                            // Si le dossier source n'est pas 'model', on le met sous data/
+                                            def testFilePath = ""
+                                            if (sourceDir == 'model') {
+                                                testFilePath = "app/src/test/java/com/quickchat/app/data/model/${testFileName}"
+                                            } else {
+                                                // Créer le test sous data/{sourceDir}/
+                                                testFilePath = "app/src/test/java/com/quickchat/app/data/${sourceDir}/${testFileName}"
+                                            }
                                             
                                             // DEBUG: Afficher tous les chemins
                                             echo "🔍 DEBUG - Fichier source: ${file}"
-                                            echo "🔍 DEBUG - Fichier test calculé: ${testFilePath}"
+                                            echo "🔍 DEBUG - Dossier source détecté: ${sourceDir}"
+                                            echo "🔍 DEBUG - Fichier test: ${testFilePath}"
                                             echo "📁 Création du fichier: ${testFilePath}"
                                             
                                             // Extraire le dossier parent
