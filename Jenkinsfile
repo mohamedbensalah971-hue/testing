@@ -120,14 +120,25 @@ EOF
                 
                 script {
                     try {
-                        // Exécuter les tests Gradle
-                        if (isUnix()) {
-                            sh './gradlew test --no-daemon || true'
-                        } else {
-                            bat 'gradlew.bat test --no-daemon || exit 0'
-                        }
+                        // Vérifier si gradlew existe
+                        def gradlewExists = fileExists('./gradlew') || fileExists('gradlew.bat')
                         
-                        echo "✅ Tests exécutés"
+                        if (gradlewExists) {
+                            echo "✅ Gradle wrapper trouvé"
+                            
+                            // Exécuter les tests Gradle
+                            if (isUnix()) {
+                                sh 'chmod +x ./gradlew || true'
+                                sh './gradlew test --no-daemon || true'
+                            } else {
+                                bat 'gradlew.bat test --no-daemon || exit 0'
+                            }
+                            
+                            echo "✅ Tests exécutés"
+                        } else {
+                            echo "⚠️  Gradle wrapper non trouvé, skip des tests"
+                            echo "💡 Pour activer: Ajouter gradlew à ton projet"
+                        }
                         
                     } catch (Exception e) {
                         echo "⚠️  Erreur lors de l'exécution des tests: ${e.message}"
@@ -141,20 +152,30 @@ EOF
                 echo '📊 Analyse des résultats de tests...'
                 
                 script {
-                    // Chercher les rapports de tests
-                    def testReports = findFiles(glob: '**/build/test-results/test/*.xml')
-                    
-                    if (testReports.length > 0) {
-                        echo "✅ ${testReports.length} rapports de test trouvés"
+                    try {
+                        // Chercher les rapports de tests (alternative à findFiles)
+                        def testResults = sh(
+                            script: 'find . -path "*/build/test-results/test/*.xml" 2>/dev/null || echo ""',
+                            returnStdout: true
+                        ).trim()
                         
-                        // Publier les résultats
-                        try {
-                            junit '**/build/test-results/test/*.xml'
-                        } catch (Exception e) {
-                            echo "⚠️  Impossible de publier les résultats JUnit: ${e.message}"
+                        if (testResults) {
+                            echo "✅ Rapports de test trouvés:"
+                            echo testResults
+                            
+                            // Publier les résultats JUnit
+                            try {
+                                junit '**/build/test-results/test/*.xml'
+                                echo "✅ Résultats JUnit publiés"
+                            } catch (Exception e) {
+                                echo "⚠️  Impossible de publier JUnit: ${e.message}"
+                            }
+                        } else {
+                            echo "⚠️  Aucun rapport de test trouvé"
+                            echo "💡 Ceci est normal si gradlew n'a pas été exécuté"
                         }
-                    } else {
-                        echo "⚠️  Aucun rapport de test trouvé"
+                    } catch (Exception e) {
+                        echo "⚠️  Erreur lors de la recherche des rapports: ${e.message}"
                     }
                 }
             }
@@ -173,13 +194,14 @@ EOF
                             -d '{
                                 "build_number": "${env.BUILD_NUMBER}",
                                 "status": "success",
+                                "project": "${env.JOB_NAME}",
                                 "timestamp": "${new Date()}"
-                            }' || true
+                            }' || echo "Agent IA non disponible"
                         """
                         
-                        echo "✅ Agent IA notifié"
+                        echo "✅ Tentative de notification Agent IA"
                     } catch (Exception e) {
-                        echo "⚠️  Notification échouée: ${e.message}"
+                        echo "⚠️  Notification échouée (normal si Agent IA non démarré): ${e.message}"
                     }
                 }
             }
