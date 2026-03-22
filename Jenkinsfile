@@ -87,8 +87,8 @@ pipeline {
                                         -H 'Content-Type: application/json' \
                                         -d @- << 'EOF'
 {
-  "file": "${file}",
-  "code": ${groovy.json.JsonOutput.toJson(fileContent)},
+  "source_file": "${file}",
+  "source_code": ${groovy.json.JsonOutput.toJson(fileContent)},
   "class_name": "${className}"
 }
 EOF
