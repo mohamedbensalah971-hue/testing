@@ -17,7 +17,7 @@ pipeline {
                 script {
                     try {
                         env.CHANGED_FILES = sh(
-                            script: 'git diff --name-only HEAD~1 || echo ""',
+                            script: 'git show --pretty="" --name-only HEAD || echo ""',
                             returnStdout: true
                         ).trim()
                         
@@ -38,7 +38,7 @@ pipeline {
                     if (env.CHANGED_FILES) {
                         def sourceFiles = sh(
                             script: """
-                                echo "${env.CHANGED_FILES}" | grep -E '\\.(kt|java)\$' | grep -v 'Test\\.(kt|java)\$' || echo ""
+                                echo "${env.CHANGED_FILES}" | grep -E '^app/src/main/.*\\.(kt|java)\$' | grep -v '/test/' | grep -v 'Test\\.(kt|java)\$' || echo ""
                             """,
                             returnStdout: true
                         ).trim()
@@ -82,20 +82,37 @@ pipeline {
                                 echo "🔍 DEBUG - Nom de classe: ${className}"
                                 
                                 // Appeler l'Agent IA
-                                def response = sh(
-                                    script: """
-                                        curl -X POST ${AGENT_IA_URL}/generate-tests \\
-                                        -H 'Content-Type: application/json' \\
-                                        -d @- << 'EOF'
+                                def response = ""
+                                def maxRetries = 3
+                                for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                                    response = sh(
+                                        script: """
+                                            curl -sS -X POST ${AGENT_IA_URL}/generate-tests \\
+                                            -H 'Content-Type: application/json' \\
+                                            -d @- << 'EOF'
 {
   "source_file": "${file}",
   "source_code": ${groovy.json.JsonOutput.toJson(fileContent)},
   "class_name": "${className}"
 }
 EOF
-                                    """,
-                                    returnStdout: true
-                                ).trim()
+                                        """,
+                                        returnStdout: true
+                                    ).trim()
+
+                                    def isRateLimited = response.contains('"rate_limit_exceeded":true') ||
+                                        response.contains('"error":"Rate limit exceeded')
+
+                                    if (!isRateLimited) {
+                                        break
+                                    }
+
+                                    if (attempt < maxRetries) {
+                                        def waitSeconds = 15 * attempt
+                                        echo "⏳ Agent IA rate-limited (tentative ${attempt}/${maxRetries}), retry dans ${waitSeconds}s..."
+                                        sleep(time: waitSeconds, unit: 'SECONDS')
+                                    }
+                                }
                                 
                                 echo "Réponse Agent IA: ${response}"
                                 
@@ -250,7 +267,11 @@ EOF
                                     }
                                     
                                 } else {
-                                    echo "⚠️  Génération échouée pour ${className}"
+                                    if (response.contains('"rate_limit_exceeded":true')) {
+                                        echo "⚠️  Agent IA en rate-limit pour ${className}. Réessayez dans quelques minutes."
+                                    } else {
+                                        echo "⚠️  Génération échouée pour ${className}"
+                                    }
                                 }
                                 
                             } catch (Exception e) {
