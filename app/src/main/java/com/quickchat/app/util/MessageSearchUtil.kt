@@ -74,7 +74,7 @@ object MessageSearchUtil {
     
     /**
      * Counts unread messages by sender in a conversation.
-     * 
+     * 1
      * @param messages List of messages to analyze
      * @param conversationId ID of the conversation
      * @return Map of sender ID to unread message count
