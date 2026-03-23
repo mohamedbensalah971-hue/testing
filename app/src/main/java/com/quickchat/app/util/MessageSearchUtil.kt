@@ -1,5 +1,5 @@
 package com.quickchat.app.util
-
+//test19
 /**
  * Utility for searching and filtering messages with various criteria.
  * Medium complexity: handles multiple filter conditions and sorting.
@@ -74,7 +74,7 @@ object MessageSearchUtil {
     
     /**
      * Counts unread messages by sender in a conversation.
-     * 1
+     * 
      * @param messages List of messages to analyze
      * @param conversationId ID of the conversation
      * @return Map of sender ID to unread message count
