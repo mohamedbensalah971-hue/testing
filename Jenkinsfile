@@ -169,14 +169,25 @@ EOF
                                             
                                             // Push automatique vers GitHub
                                             try {
-                                                sh """
-                                                    git push origin main || echo "Push échoué (normal si pas de nouveaux commits)"
-                                                """
-                                                echo "🚀 Test pushé vers GitHub"
-                                            } catch (Exception pushError) {
-                                                echo "⚠️  Push impossible: ${pushError.message}"
-                                                echo "💡 Le test est commité localement, push manuel possible"
-                                            }
+    withCredentials([usernamePassword(
+        credentialsId: 'github-credentials',
+        usernameVariable: 'GIT_USERNAME',
+        passwordVariable: 'GIT_PASSWORD'
+    )]) {
+        sh """
+            # Checkout main si en detached HEAD
+            git checkout main || git checkout -b main
+            
+            # Push avec credentials dans l'URL
+            git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/mohamedbensalah971/testing.git main
+        """
+    }
+    echo "🚀 Test pushé vers GitHub avec succès!"
+} catch (Exception pushError) {
+    echo "⚠️  Push échoué: ${pushError.message}"
+    echo "💡 Le test est commité localement dans Jenkins"
+    echo "💡 Chemin: /var/lib/jenkins/workspace/SmartTalk-Android-Tests/${testFilePath}"
+}
                                             
                                             // Extraire et afficher les métriques
                                             if (response.contains('"confidence":')) {
