@@ -18,12 +18,35 @@ pipeline {
                     // Récupérer les fichiers modifiés
                     try {
                         env.CHANGED_FILES = sh(
-                            script: 'git show --pretty="" --name-only HEAD || echo ""',
+                            script: '''
+                                set +e
+                                git fetch --unshallow origin >/dev/null 2>&1 || true
+
+                                CHANGED=$(git diff-tree --no-commit-id --name-only -r -m HEAD 2>/dev/null)
+                                if [ -z "$CHANGED" ]; then
+                                    CHANGED=$(git show --pretty="" --name-only HEAD 2>/dev/null)
+                                fi
+                                if [ -z "$CHANGED" ]; then
+                                    CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null)
+                                fi
+
+                                printf "%s" "$CHANGED"
+                            ''',
                             returnStdout: true
                         ).trim()
 
                         env.DELETED_FILES = sh(
-                            script: 'git diff-tree --no-commit-id --name-only --diff-filter=D -r HEAD || echo ""',
+                            script: '''
+                                set +e
+                                git fetch --unshallow origin >/dev/null 2>&1 || true
+
+                                DELETED=$(git diff-tree --no-commit-id --name-status -r -m HEAD 2>/dev/null | grep '^D' | cut -f2)
+                                if [ -z "$DELETED" ]; then
+                                    DELETED=$(git diff --name-only --diff-filter=D HEAD~1 HEAD 2>/dev/null)
+                                fi
+
+                                printf "%s" "$DELETED"
+                            ''',
                             returnStdout: true
                         ).trim()
                         
