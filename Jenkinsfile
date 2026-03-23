@@ -50,6 +50,15 @@ pipeline {
                             """,
                             returnStdout: true
                         ).trim()
+
+                        if (sourceFiles && env.DELETED_FILES) {
+                            def deletedSet = env.DELETED_FILES.split('\n') as Set
+                            sourceFiles = sourceFiles
+                                .split('\n')
+                                .findAll { it?.trim() && !deletedSet.contains(it.trim()) }
+                                .join('\n')
+                                .trim()
+                        }
                         
                         if (sourceFiles) {
                             env.SOURCE_FILES = sourceFiles
@@ -94,12 +103,24 @@ pipeline {
 
                     env.DELETED_SOURCE_FILES.split('\n').each { file ->
                         if (file.trim()) {
+                            def className = file.tokenize('/').last().replace('.kt', '').replace('.java', '')
+                            def sourceParts = file.split('/')
+                            def sourceDir = sourceParts.length >= 2 ? sourceParts[sourceParts.length - 2] : ""
+
+                            // Chemin "standard" (main -> test)
                             def testFilePath = file.replace('/main/', '/test/')
                                 .replace('.kt', 'Test.kt')
                                 .replace('.java', 'Test.java')
                             removedTests << testFilePath
+
+                            // Chemin historique utilisé précédemment: app/src/test/java/com/quickchat/app/data/{sourceDir}/ClassTest.kt
+                            if (sourceDir) {
+                                removedTests << "app/src/test/java/com/quickchat/app/data/${sourceDir}/${className}Test.kt"
+                            }
                         }
                     }
+
+                    removedTests = removedTests.unique()
 
                     if (removedTests.size() > 0) {
                         withCredentials([usernamePassword(credentialsId: 'github-credentials', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN')]) {
@@ -148,6 +169,11 @@ pipeline {
                             echo "📝 Génération test pour: ${file}"
                             
                             try {
+                                if (!fileExists(file)) {
+                                    echo "ℹ️  Fichier source introuvable (probablement supprimé): ${file}. Skip génération."
+                                    return
+                                }
+
                                 // Lire le contenu du fichier
                                 def fileContent = readFile(file)
                                 
