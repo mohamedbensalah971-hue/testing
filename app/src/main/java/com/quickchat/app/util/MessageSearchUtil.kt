@@ -1,5 +1,5 @@
 package com.quickchat.app.util
-//test19
+//test21
 /**
  * Utility for searching and filtering messages with various criteria.
  * Medium complexity: handles multiple filter conditions and sorting.
