@@ -18,44 +18,14 @@ pipeline {
                     // Récupérer les fichiers modifiés
                     try {
                         env.CHANGED_FILES = sh(
-                            script: '''
-                                set +e
-                                git fetch --unshallow origin >/dev/null 2>&1 || true
-
-                                CHANGED=$(git diff-tree --no-commit-id --name-only -r -m HEAD 2>/dev/null)
-                                if [ -z "$CHANGED" ]; then
-                                    CHANGED=$(git show --pretty="" --name-only HEAD 2>/dev/null)
-                                fi
-                                if [ -z "$CHANGED" ]; then
-                                    CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null)
-                                fi
-
-                                printf "%s" "$CHANGED"
-                            ''',
-                            returnStdout: true
-                        ).trim()
-
-                        env.DELETED_FILES = sh(
-                            script: '''
-                                set +e
-                                git fetch --unshallow origin >/dev/null 2>&1 || true
-
-                                DELETED=$(git diff-tree --no-commit-id --name-status -r -m HEAD 2>/dev/null | grep '^D' | cut -f2)
-                                if [ -z "$DELETED" ]; then
-                                    DELETED=$(git diff --name-only --diff-filter=D HEAD~1 HEAD 2>/dev/null)
-                                fi
-
-                                printf "%s" "$DELETED"
-                            ''',
+                            script: 'git show --pretty="" --name-only HEAD || echo ""',
                             returnStdout: true
                         ).trim()
                         
                         echo "Fichiers modifiés: ${env.CHANGED_FILES}"
-                        echo "Fichiers supprimés: ${env.DELETED_FILES}"
                     } catch (Exception e) {
                         echo "Premier build, pas de diff disponible"
                         env.CHANGED_FILES = ""
-                        env.DELETED_FILES = ""
                     }
                 }
             }
@@ -73,15 +43,6 @@ pipeline {
                             """,
                             returnStdout: true
                         ).trim()
-
-                        if (sourceFiles && env.DELETED_FILES) {
-                            def deletedSet = env.DELETED_FILES.split('\n') as Set
-                            sourceFiles = sourceFiles
-                                .split('\n')
-                                .findAll { it?.trim() && !deletedSet.contains(it.trim()) }
-                                .join('\n')
-                                .trim()
-                        }
                         
                         if (sourceFiles) {
                             env.SOURCE_FILES = sourceFiles
@@ -94,92 +55,11 @@ pipeline {
                         echo "⚠️  Aucun fichier modifié détecté"
                         env.SOURCE_FILES = ""
                     }
-
-                    if (env.DELETED_FILES) {
-                        def deletedSourceFiles = sh(
-                            script: """
-                                echo "${env.DELETED_FILES}" | grep -E '^app/src/main/.*\\.(kt|java)\$' | grep -v '/test/' | grep -v 'Test\\.(kt|java)\$' || echo ""
-                            """,
-                            returnStdout: true
-                        ).trim()
-
-                        env.DELETED_SOURCE_FILES = deletedSourceFiles
-                        if (deletedSourceFiles) {
-                            echo "🗑️  Fichiers source supprimés détectés: ${deletedSourceFiles}"
-                        }
-                    } else {
-                        env.DELETED_SOURCE_FILES = ""
-                    }
-                }
-            }
-        }
-
-        stage('3. Supprimer Tests Obsolètes') {
-            when {
-                expression { env.DELETED_SOURCE_FILES != "" && env.DELETED_SOURCE_FILES != null }
-            }
-            steps {
-                echo '🧹 Suppression des tests obsolètes...'
-
-                script {
-                    def removedTests = []
-
-                    env.DELETED_SOURCE_FILES.split('\n').each { file ->
-                        if (file.trim()) {
-                            def className = file.tokenize('/').last().replace('.kt', '').replace('.java', '')
-                            def sourceParts = file.split('/')
-                            def sourceDir = sourceParts.length >= 2 ? sourceParts[sourceParts.length - 2] : ""
-
-                            // Chemin "standard" (main -> test)
-                            def testFilePath = file.replace('/main/', '/test/')
-                                .replace('.kt', 'Test.kt')
-                                .replace('.java', 'Test.java')
-                            removedTests << testFilePath
-
-                            // Chemin historique utilisé précédemment: app/src/test/java/com/quickchat/app/data/{sourceDir}/ClassTest.kt
-                            if (sourceDir) {
-                                removedTests << "app/src/test/java/com/quickchat/app/data/${sourceDir}/${className}Test.kt"
-                            }
-                        }
-                    }
-
-                    removedTests = removedTests.unique()
-
-                    if (removedTests.size() > 0) {
-                        withCredentials([usernamePassword(credentialsId: 'github-credentials', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN')]) {
-                            sh """
-                                set -e
-                                git config user.name "Jenkins CI"
-                                git config user.email "jenkins@ci.local"
-
-                                git fetch origin main
-                                git checkout main || git checkout -b main origin/main
-                                git pull --rebase origin main || true
-
-                                CHANGED=0
-                                ${removedTests.collect { "if [ -f \"${it}\" ]; then git rm -f \"${it}\"; CHANGED=1; fi" }.join('\n                                ')}
-
-                                if [ "\$CHANGED" -eq 0 ]; then
-                                    echo "ℹ️  Aucun test obsolète à supprimer"
-                                    exit 0
-                                fi
-
-                                git commit -m "test: Remove obsolete tests (Auto-generated by Agent IA)"
-
-                                REMOTE_URL=\$(git config --get remote.origin.url)
-                                AUTH_URL=\$(echo "\$REMOTE_URL" | sed "s#https://#https://${GIT_USERNAME}:${GIT_TOKEN}@#")
-                                git push "\$AUTH_URL" main
-                            """
-                        }
-                        echo "✅ Suppression des tests obsolètes poussée vers GitHub"
-                    } else {
-                        echo "ℹ️  Aucun test obsolète à supprimer"
-                    }
                 }
             }
         }
         
-        stage('4. Générer Tests via Agent IA') {
+        stage('3. Générer Tests via Agent IA') {
             when {
                 expression { env.SOURCE_FILES != "" && env.SOURCE_FILES != null }
             }
@@ -192,11 +72,6 @@ pipeline {
                             echo "📝 Génération test pour: ${file}"
                             
                             try {
-                                if (!fileExists(file)) {
-                                    echo "ℹ️  Fichier source introuvable (probablement supprimé): ${file}. Skip génération."
-                                    return
-                                }
-
                                 // Lire le contenu du fichier
                                 def fileContent = readFile(file)
                                 
@@ -282,41 +157,22 @@ EOF
                                             
                                             echo "✅ Fichier test sauvegardé: ${testFilePath}"
                                             
-                                            // Commit + push automatique du test vers GitHub (auth Jenkins)
+                                            // Commit automatique du test
+                                            sh """
+                                                git add ${testFilePath}
+                                                git config user.name "Jenkins CI"
+                                                git config user.email "jenkins@ci.local"
+                                                git commit -m "test: Add ${testFileName} (Auto-generated by Agent IA)" || echo "Rien à committer"
+                                            """
+                                            
+                                            echo "✅ Test commité automatiquement"
+                                            
+                                            // Push automatique vers GitHub
                                             try {
-                                                withCredentials([usernamePassword(credentialsId: 'github-credentials', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN')]) {
-                                                    sh """
-                                                        set -e
-
-                                                        git config user.name "Jenkins CI"
-                                                        git config user.email "jenkins@ci.local"
-
-                                                        # Sauvegarder le fichier généré avant changement éventuel de branche
-                                                        git stash push -u -- "${testFilePath}" || true
-
-                                                        # Se positionner sur main et synchroniser
-                                                        git fetch origin main
-                                                        git checkout main || git checkout -b main origin/main
-                                                        git pull --rebase origin main || true
-
-                                                        # Restaurer le fichier généré
-                                                        git stash pop || true
-
-                                                        git add "${testFilePath}"
-                                                        if git diff --cached --quiet; then
-                                                            echo "⚠️  Aucun changement à committer"
-                                                            exit 0
-                                                        fi
-
-                                                        git commit -m "test: Add ${testFileName} (Auto-generated by Agent IA)"
-                                                        echo "✅ Test commité automatiquement"
-
-                                                        REMOTE_URL=\$(git config --get remote.origin.url)
-                                                        AUTH_URL=\$(echo "\$REMOTE_URL" | sed "s#https://#https://${GIT_USERNAME}:${GIT_TOKEN}@#")
-                                                        git push "\$AUTH_URL" main
-                                                        echo "🚀 Test pushé vers GitHub"
-                                                    """
-                                                }
+                                                sh """
+                                                    git push origin main || echo "Push échoué (normal si pas de nouveaux commits)"
+                                                """
+                                                echo "🚀 Test pushé vers GitHub"
                                             } catch (Exception pushError) {
                                                 echo "⚠️  Push impossible: ${pushError.message}"
                                                 echo "💡 Le test est commité localement, push manuel possible"
@@ -370,7 +226,7 @@ EOF
             }
         }
         
-        stage('5. Exécuter Tests Gradle') {
+        stage('4. Exécuter Tests Gradle') {
             steps {
                 echo '🧪 Exécution des tests unitaires...'
                 
@@ -403,7 +259,7 @@ EOF
             }
         }
         
-        stage('6. Vérifier Résultats Tests') {
+        stage('5. Vérifier Résultats Tests') {
             steps {
                 echo '📊 Analyse des résultats de tests...'
                 
@@ -437,7 +293,7 @@ EOF
             }
         }
         
-        stage('7. Notifier Agent IA') {
+        stage('6. Notifier Agent IA') {
             steps {
                 echo '📡 Notification Agent IA...'
                 
