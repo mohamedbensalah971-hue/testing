@@ -1,0 +1,42 @@
+com.quickchat.app-lifecycle-viewmodel-ktx-2.7.0-0 C:\Users\Stayha\.gradle\caches\8.13\transforms\0308d003e5b7baa9b8b81485d9caeacd\transformed\lifecycle-viewmodel-ktx-2.7.0\res
+com.quickchat.app-core-runtime-2.2.0-1 C:\Users\Stayha\.gradle\caches\8.13\transforms\0b2dd86ff84d3392b50f7a491254aa07\transformed\core-runtime-2.2.0\res
+com.quickchat.app-cardview-1.0.0-2 C:\Users\Stayha\.gradle\caches\8.13\transforms\20be4bb887ec441f673e84a64b7c132f\transformed\cardview-1.0.0\res
+com.quickchat.app-constraintlayout-2.1.4-3 C:\Users\Stayha\.gradle\caches\8.13\transforms\285fbceda319a5b7a33ee89e11ff20b6\transformed\constraintlayout-2.1.4\res
+com.quickchat.app-transition-1.2.0-4 C:\Users\Stayha\.gradle\caches\8.13\transforms\2be9eb2e280d6f9ea9b1742cb6038924\transformed\transition-1.2.0\res
+com.quickchat.app-savedstate-ktx-1.2.1-5 C:\Users\Stayha\.gradle\caches\8.13\transforms\2cf624de4905c69130173cd8bb4fe79e\transformed\savedstate-ktx-1.2.1\res
+com.quickchat.app-lifecycle-livedata-2.7.0-6 C:\Users\Stayha\.gradle\caches\8.13\transforms\3669adbcf55d8943321031efe1512710\transformed\lifecycle-livedata-2.7.0\res
+com.quickchat.app-lifecycle-runtime-2.7.0-7 C:\Users\Stayha\.gradle\caches\8.13\transforms\36937c75875a0399ae9f66df74368e6f\transformed\lifecycle-runtime-2.7.0\res
+com.quickchat.app-fragment-1.3.6-8 C:\Users\Stayha\.gradle\caches\8.13\transforms\41a0375150f21aa75e2a8d3cd6974f0f\transformed\fragment-1.3.6\res
+com.quickchat.app-lifecycle-process-2.7.0-9 C:\Users\Stayha\.gradle\caches\8.13\transforms\435dcc3111cc92b9fa04518671470136\transformed\lifecycle-process-2.7.0\res
+com.quickchat.app-lifecycle-livedata-ktx-2.7.0-10 C:\Users\Stayha\.gradle\caches\8.13\transforms\4e20e7ae2ad06e5969880148d08af04a\transformed\lifecycle-livedata-ktx-2.7.0\res
+com.quickchat.app-lifecycle-runtime-ktx-2.7.0-11 C:\Users\Stayha\.gradle\caches\8.13\transforms\5aaa293f539377e902df36db7ae807e4\transformed\lifecycle-runtime-ktx-2.7.0\res
+com.quickchat.app-appcompat-resources-1.6.1-12 C:\Users\Stayha\.gradle\caches\8.13\transforms\60d6d49b77d4628e705cca8d0e1cc169\transformed\appcompat-resources-1.6.1\res
+com.quickchat.app-savedstate-1.2.1-13 C:\Users\Stayha\.gradle\caches\8.13\transforms\7b2324f3ebd974a167f0259579aa2a9a\transformed\savedstate-1.2.1\res
+com.quickchat.app-lifecycle-livedata-core-2.7.0-14 C:\Users\Stayha\.gradle\caches\8.13\transforms\81a5292d8dde96f8178f0ce67e642f09\transformed\lifecycle-livedata-core-2.7.0\res
+com.quickchat.app-lifecycle-livedata-core-ktx-2.7.0-15 C:\Users\Stayha\.gradle\caches\8.13\transforms\83f2e9d769167e784ecfdfffdb3fdd82\transformed\lifecycle-livedata-core-ktx-2.7.0\res
+com.quickchat.app-drawerlayout-1.1.1-16 C:\Users\Stayha\.gradle\caches\8.13\transforms\8a3381dd887f501ba7befe96f3177e15\transformed\drawerlayout-1.1.1\res
+com.quickchat.app-customview-poolingcontainer-1.0.0-17 C:\Users\Stayha\.gradle\caches\8.13\transforms\8bcd0c74fcfc25a6a8cea1352598896d\transformed\customview-poolingcontainer-1.0.0\res
+com.quickchat.app-emoji2-1.2.0-18 C:\Users\Stayha\.gradle\caches\8.13\transforms\8d1c0a2d9854bb7a792b5b53ea144b1b\transformed\emoji2-1.2.0\res
+com.quickchat.app-lifecycle-viewmodel-savedstate-2.7.0-19 C:\Users\Stayha\.gradle\caches\8.13\transforms\95e6996d589ff838799cdf4d7b1a8c62\transformed\lifecycle-viewmodel-savedstate-2.7.0\res
+com.quickchat.app-viewpager2-1.1.0-beta02-20 C:\Users\Stayha\.gradle\caches\8.13\transforms\9c148899ea427d72f3c0ba557cba36df\transformed\viewpager2-1.1.0-beta02\res
+com.quickchat.app-core-1.12.0-21 C:\Users\Stayha\.gradle\caches\8.13\transforms\a0b2029eafea076824163b9d7d1746d0\transformed\core-1.12.0\res
+com.quickchat.app-core-ktx-1.12.0-22 C:\Users\Stayha\.gradle\caches\8.13\transforms\a33acda3cf58ff314d2d4ef34ec372ce\transformed\core-ktx-1.12.0\res
+com.quickchat.app-emoji2-views-helper-1.2.0-23 C:\Users\Stayha\.gradle\caches\8.13\transforms\a5c5c708217159650772cc1a1eb3da1d\transformed\emoji2-views-helper-1.2.0\res
+com.quickchat.app-coordinatorlayout-1.1.0-24 C:\Users\Stayha\.gradle\caches\8.13\transforms\a5d9867166d50728df0bd5b908cb76cf\transformed\coordinatorlayout-1.1.0\res
+com.quickchat.app-lifecycle-viewmodel-2.7.0-25 C:\Users\Stayha\.gradle\caches\8.13\transforms\a7d1813f6e971df0570bdb76bd3ac71b\transformed\lifecycle-viewmodel-2.7.0\res
+com.quickchat.app-annotation-experimental-1.3.0-26 C:\Users\Stayha\.gradle\caches\8.13\transforms\afba188a49d152603b571413b7012109\transformed\annotation-experimental-1.3.0\res
+com.quickchat.app-activity-1.8.2-27 C:\Users\Stayha\.gradle\caches\8.13\transforms\bddc616e17ce7a4473a81a941736ff41\transformed\activity-1.8.2\res
+com.quickchat.app-activity-ktx-1.8.2-28 C:\Users\Stayha\.gradle\caches\8.13\transforms\beedef556737bce9f475e69a67f45772\transformed\activity-ktx-1.8.2\res
+com.quickchat.app-appcompat-1.6.1-29 C:\Users\Stayha\.gradle\caches\8.13\transforms\c122fa86724bc612cf9db518e72f5420\transformed\appcompat-1.6.1\res
+com.quickchat.app-material-1.11.0-30 C:\Users\Stayha\.gradle\caches\8.13\transforms\cf49f90aafcbef07d0c2fb5968bdc57d\transformed\material-1.11.0\res
+com.quickchat.app-profileinstaller-1.3.0-31 C:\Users\Stayha\.gradle\caches\8.13\transforms\de854e16906468011260e3c78ea4d9a5\transformed\profileinstaller-1.3.0\res
+com.quickchat.app-recyclerview-1.3.2-32 C:\Users\Stayha\.gradle\caches\8.13\transforms\e711e445feb1b0697110bf680eebb48a\transformed\recyclerview-1.3.2\res
+com.quickchat.app-startup-runtime-1.1.1-33 C:\Users\Stayha\.gradle\caches\8.13\transforms\f5a800c93044e13b327e980039b425ba\transformed\startup-runtime-1.1.1\res
+com.quickchat.app-pngs-34 C:\Users\Stayha\Desktop\test android\app\build\generated\res\pngs\debug
+com.quickchat.app-resValues-35 C:\Users\Stayha\Desktop\test android\app\build\generated\res\resValues\debug
+com.quickchat.app-updated_navigation_xml-36 C:\Users\Stayha\Desktop\test android\app\build\generated\updated_navigation_xml\debug
+com.quickchat.app-packageDebugResources-37 C:\Users\Stayha\Desktop\test android\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.quickchat.app-packageDebugResources-38 C:\Users\Stayha\Desktop\test android\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.quickchat.app-debug-39 C:\Users\Stayha\Desktop\test android\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.quickchat.app-debug-40 C:\Users\Stayha\Desktop\test android\app\src\debug\res
+com.quickchat.app-main-41 C:\Users\Stayha\Desktop\test android\app\src\main\res

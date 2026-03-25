@@ -1,0 +1,22 @@
+[
+    {
+        "merged": "com.quickchat.app-mergeReleaseResources-37:/layout/activity_chat.xml",
+        "source": "com.quickchat.app-main-39:/layout/activity_chat.xml"
+    },
+    {
+        "merged": "com.quickchat.app-mergeReleaseResources-37:/layout/item_conversation.xml",
+        "source": "com.quickchat.app-main-39:/layout/item_conversation.xml"
+    },
+    {
+        "merged": "com.quickchat.app-mergeReleaseResources-37:/layout/activity_conversations.xml",
+        "source": "com.quickchat.app-main-39:/layout/activity_conversations.xml"
+    },
+    {
+        "merged": "com.quickchat.app-mergeReleaseResources-37:/layout/item_message_sent.xml",
+        "source": "com.quickchat.app-main-39:/layout/item_message_sent.xml"
+    },
+    {
+        "merged": "com.quickchat.app-mergeReleaseResources-37:/layout/item_message_received.xml",
+        "source": "com.quickchat.app-main-39:/layout/item_message_received.xml"
+    }
+]
