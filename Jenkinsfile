@@ -11,6 +11,8 @@ pipeline {
         AGENT_IA_URL = 'http://localhost:8000'
         PROJECT_PATH = "${WORKSPACE}"
         PYTHON_VENV = 'C:\\Users\\Stayha\\Downloads\\agent-ia-server-phase1\\agent-ia-server\\venv'
+        // Set this in Jenkins Global Env or job env if different on your server
+        ANDROID_SDK_ROOT = '/opt/android-sdk'
     }
 
     stages {
@@ -21,7 +23,6 @@ pipeline {
                 checkout scm
 
                 script {
-                    // Ensure we are on a real local branch, not detached HEAD.
                     sh 'git checkout -B main origin/main'
 
                     try {
@@ -75,6 +76,8 @@ pipeline {
                 echo 'Generation des tests via Agent IA...'
 
                 script {
+                    env.GENERATED_TEST_FILES = ""
+
                     env.SOURCE_FILES.split('\n').each { file ->
                         if (file.trim()) {
                             echo "Generation test pour: ${file}"
@@ -122,102 +125,60 @@ EOF
                                 if (response.contains('"success": true') || response.contains('"success":true')) {
                                     echo "Test genere avec succes pour ${className}"
 
-                                    try {
-                                        def startMarker = '"generated_tests":"'
-                                        def endMarker = '","explanation"'
+                                    def startMarker = '"generated_tests":"'
+                                    def endMarker = '","explanation"'
 
-                                        def startIdx = response.indexOf(startMarker)
-                                        def endIdx = response.indexOf(endMarker)
+                                    def startIdx = response.indexOf(startMarker)
+                                    def endIdx = response.indexOf(endMarker)
 
-                                        if (startIdx != -1 && endIdx != -1) {
-                                            startIdx += startMarker.length()
-                                            def testCodeEscaped = response.substring(startIdx, endIdx)
+                                    if (startIdx != -1 && endIdx != -1) {
+                                        startIdx += startMarker.length()
+                                        def testCodeEscaped = response.substring(startIdx, endIdx)
 
-                                            def testCode = testCodeEscaped
-                                                .replace('\\n', '\n')
-                                                .replace('\\t', '\t')
-                                                .replace('\\"', '"')
-                                                .replace('\\\\', '\\')
+                                        def testCode = testCodeEscaped
+                                            .replace('\\n', '\n')
+                                            .replace('\\t', '\t')
+                                            .replace('\\"', '"')
+                                            .replace('\\\\', '\\')
 
-                                            def testFileName = "${className}Test.kt"
-                                            def testFilePath = file.replace('/main/', '/test/')
-                                                           .replace('.kt', 'Test.kt')
-                                                           .replace('.java', 'Test.java')
+                                        def testFilePath = file.replace('/main/', '/test/')
+                                                       .replace('.kt', 'Test.kt')
+                                                       .replace('.java', 'Test.java')
 
-                                            echo "Creation du fichier: ${testFilePath}"
+                                        echo "Creation du fichier: ${testFilePath}"
 
-                                            sh "mkdir -p \$(dirname ${testFilePath})"
-                                            writeFile file: testFilePath, text: testCode
+                                        sh "mkdir -p \$(dirname ${testFilePath})"
+                                        writeFile file: testFilePath, text: testCode
 
-                                            echo "Fichier test sauvegarde: ${testFilePath}"
+                                        echo "Fichier test sauvegarde: ${testFilePath}"
 
-                                            // Commit only if staged diff exists.
-                                            sh """
-                                                set -e
-                                                git add ${testFilePath}
-                                                git config user.name "Jenkins CI"
-                                                git config user.email "jenkins@ci.local"
-                                                if git diff --cached --quiet; then
-                                                  echo "Aucun changement a committer"
-                                                else
-                                                  git commit -m "test: Add ${testFileName} (Auto-generated by Agent IA)"
-                                                fi
-                                            """
+                                        env.GENERATED_TEST_FILES = env.GENERATED_TEST_FILES ?
+                                            "${env.GENERATED_TEST_FILES}\n${testFilePath}" :
+                                            "${testFilePath}"
 
-                                            // Logging checkpoint after commit.
-                                            sh '''
-                                                echo "Checkpoint git apres commit:"
-                                                git status --short
-                                                git log -1 --oneline || true
-                                            '''
-
-                                            // Rebase before push to reduce non-fast-forward failures.
-                                            sh 'git pull --rebase origin main'
-
-                                            // Explicit authenticated push. Fail build if push fails.
-                                            withCredentials([usernamePassword(credentialsId: 'github-credentials', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PAT')]) {
-                                                sh '''
-                                                    set -e
-                                                    git remote set-url origin https://${GIT_USER}:${GIT_PAT}@github.com/mohamedbensalah971/testing.git
-                                                    git push origin main
-                                                '''
+                                        if (response.contains('"confidence":')) {
+                                            def confMatch = (response =~ /"confidence":([0-9.]+)/)
+                                            if (confMatch) {
+                                                echo "Confiance: ${confMatch[0][1]}"
                                             }
-
-                                            // Logging checkpoint after push.
-                                            sh '''
-                                                echo "Checkpoint git apres push:"
-                                                git ls-remote --heads origin main
-                                            '''
-
-                                            echo "Test pousse vers GitHub"
-
-                                            if (response.contains('"confidence":')) {
-                                                def confMatch = (response =~ /"confidence":([0-9.]+)/)
-                                                if (confMatch) {
-                                                    echo "Confiance: ${confMatch[0][1]}"
-                                                }
-                                            }
-
-                                            if (response.contains('"tokens_used":')) {
-                                                def tokensMatch = (response =~ /"tokens_used":([0-9]+)/)
-                                                if (tokensMatch) {
-                                                    echo "Tokens utilises: ${tokensMatch[0][1]}"
-                                                }
-                                            }
-
-                                            if (response.contains('"rag_context_used":')) {
-                                                def ragMatch = (response =~ /"rag_context_used":(true|false)/)
-                                                if (ragMatch) {
-                                                    echo "RAG utilise: ${ragMatch[0][1]}"
-                                                }
-                                            }
-
-                                        } else {
-                                            error("Impossible d'extraire le code du test de la reponse")
                                         }
 
-                                    } catch (Exception saveError) {
-                                        error("Erreur lors de la sauvegarde/commit/push: ${saveError.message}")
+                                        if (response.contains('"tokens_used":')) {
+                                            def tokensMatch = (response =~ /"tokens_used":([0-9]+)/)
+                                            if (tokensMatch) {
+                                                echo "Tokens utilises: ${tokensMatch[0][1]}"
+                                            }
+                                        }
+
+                                        if (response.contains('"rag_context_used":')) {
+                                            def ragMatch = (response =~ /"rag_context_used":(true|false)/)
+                                            if (ragMatch) {
+                                                echo "RAG utilise: ${ragMatch[0][1]}"
+                                            }
+                                        }
+
+                                    } else {
+                                        error("Impossible d'extraire le code du test de la reponse")
                                     }
 
                                 } else {
@@ -233,11 +194,62 @@ EOF
                             }
                         }
                     }
+
+                    if (env.GENERATED_TEST_FILES?.trim()) {
+                        echo "Fichiers de test generes (non pushes):\n${env.GENERATED_TEST_FILES}"
+                        sh '''
+                            set +e
+                            git status --short
+                        '''
+                    } else {
+                        echo "Aucun test genere."
+                    }
                 }
             }
         }
 
-        stage('4. Executer Tests Gradle') {
+        stage('4. Configurer Android SDK') {
+            steps {
+                echo 'Configuration Android SDK pour CI...'
+                script {
+                    if (isUnix()) {
+                        sh '''
+                            set -e
+                            SDK_PATH="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+                            if [ -z "$SDK_PATH" ]; then
+                              echo "ANDROID_HOME/ANDROID_SDK_ROOT non defini."
+                              exit 1
+                            fi
+                            if [ ! -d "$SDK_PATH" ]; then
+                              echo "SDK introuvable: $SDK_PATH"
+                              exit 1
+                            fi
+
+                            echo "sdk.dir=$SDK_PATH" > local.properties
+                            echo "local.properties genere avec sdk.dir=$SDK_PATH"
+                            ls -la local.properties
+                        '''
+                    } else {
+                        bat '''
+                            if "%ANDROID_HOME%"=="" if "%ANDROID_SDK_ROOT%"=="" (
+                              echo ANDROID_HOME/ANDROID_SDK_ROOT non defini.
+                              exit /b 1
+                            )
+                            set SDK_PATH=%ANDROID_HOME%
+                            if "%SDK_PATH%"=="" set SDK_PATH=%ANDROID_SDK_ROOT%
+                            if not exist "%SDK_PATH%" (
+                              echo SDK introuvable: %SDK_PATH%
+                              exit /b 1
+                            )
+                            > local.properties echo sdk.dir=%SDK_PATH:\=/%
+                            type local.properties
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('5. Executer Tests Gradle') {
             steps {
                 echo 'Execution des tests unitaires...'
 
@@ -259,31 +271,38 @@ EOF
 
                         echo "Tests executes"
                     } else {
-                        // Keep pipeline successful but explicit.
                         currentBuild.result = 'UNSTABLE'
                         echo "Gradle wrapper non trouve, tests non executes"
-                        echo "Pour activer: ajouter gradlew, gradlew.bat, gradle/wrapper/gradle-wrapper.jar, gradle/wrapper/gradle-wrapper.properties"
                     }
                 }
             }
         }
 
-        stage('5. Verifier Resultats Tests') {
+        stage('6. Verifier Resultats Tests') {
             steps {
                 echo 'Analyse des resultats de tests...'
                 script {
-                    // JUnit publisher: does not fail build when no reports.
                     junit testResults: '**/build/test-results/test/*.xml', allowEmptyResults: true
                     echo "Publication JUnit terminee"
                 }
             }
         }
 
-        stage('6. Notifier Agent IA') {
+        stage('7. Archiver Tests Generes') {
+            steps {
+                echo 'Archivage des tests generes...'
+                script {
+                    archiveArtifacts artifacts: 'app/src/test/**/*.kt, app/src/test/**/*.java', allowEmptyArchive: true
+                    echo 'Tests archives comme artifacts Jenkins.'
+                    echo 'Recuperez-les depuis Build > Artifacts, puis appliquez dans votre repo local.'
+                }
+            }
+        }
+
+        stage('8. Notifier Agent IA') {
             steps {
                 echo 'Notification Agent IA...'
                 script {
-                    // Optional webhook: if missing endpoint, mark UNSTABLE (visible), do not fail full pipeline.
                     catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
                         sh """
                             set -e
