@@ -1,6 +1,5 @@
 package com.quickchat.app.util
-//12
-//test 29
+//testing
 fun validateMessage(text: String): String? {
     val trimmed = text.trim()
     if (trimmed.isEmpty()) return null
