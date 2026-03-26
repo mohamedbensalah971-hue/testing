@@ -87,4 +87,4 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 }
-//testingg
+//testings
