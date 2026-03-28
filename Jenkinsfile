@@ -10,8 +10,6 @@ pipeline {
     environment {
         AGENT_IA_URL = 'http://localhost:8000'
         PROJECT_PATH = "${WORKSPACE}"
-        // Chemin local du projet sur ton laptop pour copier les tests générés
-        LOCAL_PROJECT_PATH = 'C:\\Users\\Stayha\\Desktop\\test android'
         // ANDROID_HOME sera configuré dans Jenkins globalement
         // Ou décommenter la ligne suivante avec le bon chemin:
         // ANDROID_HOME = 'C:\\Users\\Stayha\\AppData\\Local\\Android\\Sdk'
@@ -25,18 +23,26 @@ pipeline {
                 checkout scm
                 
                 script {
-                    // Skip this build if commit message contains [skip ci]
+                    // Skip this build if commit message contains [skip ci] OR commit is from Jenkins
                     def commitMessage = sh(
                         script: 'git log -1 --pretty=%B || echo ""',
                         returnStdout: true
                     ).trim()
                     
-                    if (commitMessage.contains('[skip ci]') || commitMessage.contains('[ci skip]')) {
-                        echo "⏭️  Commit contient [skip ci], arrêt du build"
+                    def commitAuthor = sh(
+                        script: 'git log -1 --pretty=%an || echo ""',
+                        returnStdout: true
+                    ).trim()
+                    
+                    echo "📋 Commit message: ${commitMessage}"
+                    echo "👤 Commit author: ${commitAuthor}"
+                    
+                    if (commitMessage.contains('[skip ci]') || commitMessage.contains('[ci skip]') || commitAuthor == 'Jenkins CI') {
+                        echo "⏭️  Commit auto-généré par Jenkins, arrêt du build"
                         currentBuild.result = 'NOT_BUILT'
-                        error("Skipping build - [skip ci] detected")
+                        error("Skipping build - auto-generated commit detected")
                     }
-                    echo "✅ Pas de [skip ci] détecté, continuation du build"
+                    echo "✅ Commit utilisateur détecté, continuation du build"
                 }
             }
         }
@@ -174,28 +180,6 @@ EOF
                                         writeFile file: testFilePath, text: testCode
 
                                         echo "✅ Fichier test sauvegardé: ${testFilePath}"
-
-                                        // ========================================
-                                        // COPIER VERS LE PROJET LOCAL
-                                        // ========================================
-                                        try {
-                                            def localTestPath = "${LOCAL_PROJECT_PATH}\\${testFilePath.replace('/', '\\\\')}"
-                                            def localTestDir = localTestPath.substring(0, localTestPath.lastIndexOf('\\\\'))
-                                            
-                                            // Créer le dossier local et copier le fichier
-                                            if (isUnix()) {
-                                                sh "mkdir -p '${localTestDir.replace('\\\\', '/')}' && cp '${testFilePath}' '${localTestPath.replace('\\\\', '/')}'"
-                                            } else {
-                                                bat """
-                                                    if not exist "${localTestDir}" mkdir "${localTestDir}"
-                                                    copy /Y "${testFilePath.replace('/', '\\\\')}" "${localTestPath}"
-                                                """
-                                            }
-                                            echo "📂 Test copié vers projet local: ${localTestPath}"
-                                        } catch (Exception localCopyError) {
-                                            echo "⚠️  Copie locale échouée: ${localCopyError.message}"
-                                        }
-                                        // ========================================
 
                                         // Métriques
                                         if (response.contains('"confidence":')) {
