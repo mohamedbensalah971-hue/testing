@@ -60,3 +60,4 @@ class MessagesAdapter : ListAdapter<Message, MessagesAdapter.MessageViewHolder>(
         }
     }
 }
+//testing
