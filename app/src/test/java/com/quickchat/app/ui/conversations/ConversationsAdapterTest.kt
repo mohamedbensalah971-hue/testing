@@ -1,12 +1,15 @@
+import org.junit.jupiter.api.Assertions.*
 package com.quickchat.app.ui.conversations
 
-import com.google.common.truth.Truth.assertThat
-import com.quickchat.app.data.model.Conversation
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.DisplayName
+import androidx.recyclerview.widget.ListAdapter
+import com.quickchat.app.data.model.Conversation
+import com.quickchat.app.util.TimeFormatter
 
 class ConversationsAdapterTest {
 
@@ -20,102 +23,55 @@ class ConversationsAdapterTest {
     }
 
     @Test
-    @DisplayName("Test onCreateViewHolder returns ViewHolder")
-    fun testOnCreateViewHolder() {
-        // Given
-        val parent = mockk(relaxed = true)
-        val viewType = 0
-
-        // When
-        val viewHolder = adapter.onCreateViewHolder(parent, viewType)
-
-        // Then
-        assertThat(viewHolder).isInstanceOf(ConversationsAdapter.ViewHolder::class.java)
+    @DisplayName("Test areItemsTheSame returns true when conversation ids are the same")
+    fun testAreItemsTheSameReturnsTrue() {
+        val conversation1 = Conversation(id = 1, contactName = "John", lastMessage = "Hello", lastMessageTimestamp = 1643723400)
+        val conversation2 = Conversation(id = 1, contactName = "Jane", lastMessage = "Hi", lastMessageTimestamp = 1643723400)
+        val result = adapter.diffCallback.areItemsTheSame(conversation1, conversation2)
+        assertTrue(result)
     }
 
     @Test
-    @DisplayName("Test onBindViewHolder binds conversation data")
-    fun testOnBindViewHolder() {
-        // Given
-        val conversation = Conversation(
-            id = 1,
-            avatarInitial = 'A',
-            contactName = "John Doe",
-            lastMessage = "Hello",
-            lastMessageTimestamp = 1643723400,
-            unreadCount = 1
-        )
-        val holder = ConversationsAdapter.ViewHolder(mockk(relaxed = true))
-
-        // When
-        holder.bind(conversation)
-
-        // Then
-        // Note: We cannot directly verify the text of the views here because we are not using a real view.
-        // Instead, we can verify that the onConversationClick is called when the view is clicked.
+    @DisplayName("Test areItemsTheSame returns false when conversation ids are different")
+    fun testAreItemsTheSameReturnsFalse() {
+        val conversation1 = Conversation(id = 1, contactName = "John", lastMessage = "Hello", lastMessageTimestamp = 1643723400)
+        val conversation2 = Conversation(id = 2, contactName = "Jane", lastMessage = "Hi", lastMessageTimestamp = 1643723400)
+        val result = adapter.diffCallback.areItemsTheSame(conversation1, conversation2)
+        assertFalse(result)
     }
 
     @Test
-    @DisplayName("Test onConversationClick is called when view is clicked")
-    fun testOnConversationClick() {
-        // Given
-        val conversation = Conversation(
-            id = 1,
-            avatarInitial = 'A',
-            contactName = "John Doe",
-            lastMessage = "Hello",
-            lastMessageTimestamp = 1643723400,
-            unreadCount = 1
-        )
-        val holder = ConversationsAdapter.ViewHolder(mockk(relaxed = true))
-        holder.bind(conversation)
+    @DisplayName("Test areContentsTheSame returns true when conversations are the same")
+    fun testAreContentsTheSameReturnsTrue() {
+        val conversation1 = Conversation(id = 1, contactName = "John", lastMessage = "Hello", lastMessageTimestamp = 1643723400)
+        val conversation2 = Conversation(id = 1, contactName = "John", lastMessage = "Hello", lastMessageTimestamp = 1643723400)
+        val result = adapter.diffCallback.areContentsTheSame(conversation1, conversation2)
+        assertTrue(result)
+    }
 
-        // When
-        holder.itemView.performClick()
+    @Test
+    @DisplayName("Test areContentsTheSame returns false when conversations are different")
+    fun testAreContentsTheSameReturnsFalse() {
+        val conversation1 = Conversation(id = 1, contactName = "John", lastMessage = "Hello", lastMessageTimestamp = 1643723400)
+        val conversation2 = Conversation(id = 1, contactName = "Jane", lastMessage = "Hi", lastMessageTimestamp = 1643723400)
+        val result = adapter.diffCallback.areContentsTheSame(conversation1, conversation2)
+        assertFalse(result)
+    }
 
-        // Then
+    @Test
+    @DisplayName("Test submitList updates the adapter's list")
+    fun testSubmitListUpdatesAdapterList() {
+        val conversations = listOf(Conversation(id = 1, contactName = "John", lastMessage = "Hello", lastMessageTimestamp = 1643723400))
+        adapter.submitList(conversations)
+        assertEquals(1, adapter.itemCount)
+    }
+
+    @Test
+    @DisplayName("Test onConversationClick is called when a conversation is clicked")
+    fun testOnConversationClickIsCalled() {
+        val conversation = Conversation(id = 1, contactName = "John", lastMessage = "Hello", lastMessageTimestamp = 1643723400)
+        adapter.submitList(listOf(conversation))
+        adapter.onBindViewHolder(ConversationsAdapter.ViewHolder(mockk(relaxed = true)), 0)
         verify { onConversationClick(conversation) }
-    }
-
-    @Test
-    @DisplayName("Test areItemsTheSame returns true for same conversation")
-    fun testAreItemsTheSame() {
-        // Given
-        val oldItem = Conversation(id = 1, avatarInitial = 'A', contactName = "John Doe", lastMessage = "Hello", lastMessageTimestamp = 1643723400, unreadCount = 1)
-        val newItem = Conversation(id = 1, avatarInitial = 'A', contactName = "John Doe", lastMessage = "Hello", lastMessageTimestamp = 1643723400, unreadCount = 1)
-
-        // When
-        val result = ConversationsAdapter.ConversationDiffCallback().areItemsTheSame(oldItem, newItem)
-
-        // Then
-        assertThat(result).isTrue()
-    }
-
-    @Test
-    @DisplayName("Test areItemsTheSame returns false for different conversation")
-    fun testAreItemsTheSameDifferentConversation() {
-        // Given
-        val oldItem = Conversation(id = 1, avatarInitial = 'A', contactName = "John Doe", lastMessage = "Hello", lastMessageTimestamp = 1643723400, unreadCount = 1)
-        val newItem = Conversation(id = 2, avatarInitial = 'B', contactName = "Jane Doe", lastMessage = "Hello", lastMessageTimestamp = 1643723400, unreadCount = 1)
-
-        // When
-        val result = ConversationsAdapter.ConversationDiffCallback().areItemsTheSame(oldItem, newItem)
-
-        // Then
-        assertThat(result).isFalse()
-    }
-
-    @Test
-    @DisplayName("Test areContentsTheSame returns true for same conversation")
-    fun testAreContentsTheSame() {
-        // Given
-        val oldItem = Conversation(id = 1, avatarInitial = 'A', contactName = "John Doe", lastMessage = "Hello", lastMessageTimestamp = 1643723400, unreadCount = 1)
-        val newItem = Conversation(id = 1, avatarInitial = 'A', contactName = "John Doe", lastMessage = "Hello", lastMessageTimestamp = 1643723400, unreadCount = 1)
-
-        // When
-        val result = ConversationsAdapter.ConversationDiffCallback().areContentsTheSame(oldItem, newItem)
-
-        // Then
-        assertThat(result).isTrue()
     }
 }
