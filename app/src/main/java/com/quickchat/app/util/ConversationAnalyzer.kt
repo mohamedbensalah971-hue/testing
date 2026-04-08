@@ -216,3 +216,4 @@ object ConversationAnalyzer {
         return lastMessageTime + averageInterval
     }
 }
+//test 
