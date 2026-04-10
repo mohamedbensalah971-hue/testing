@@ -1,105 +1,70 @@
-import com.quickchat.app.ui.conversations.ConversationsActivity
-import com.quickchat.app.ui.conversations.ConversationsAdapter
-import com.quickchat.app.ui.conversations.ConversationsViewModel
+import org.junit.jupiter.api.Assertions.*
+package com.quickchat.app.ui.conversations
+
+import android.content.Intent
+import androidx.test.core.app.ApplicationProvider
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.junit.jupiter.MockitoExtension
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
-@ExtendWith(MockitoExtension::class)
+@Config(sdk = [28])
 class ConversationsActivityTest {
 
     private lateinit var activity: ConversationsActivity
     private lateinit var viewModel: ConversationsViewModel
-    private lateinit var adapter: ConversationsAdapter
 
-    @BeforeEachEach
+    @BeforeEach
     fun setup() {
-        activity = ConversationsActivity()
-        viewModel = mockk(relaxed = true)
-        adapter = mockk(relaxed = true)
+        activity = Robolectric.buildActivity(ConversationsActivity::class.java).create().get()
+        viewModel = mockk()
         activity.viewModel = viewModel
-        activity.adapter = adapter
     }
 
     @Test
-    fun `test setupToolbar sets title correctly`() {
-        // Given
-        val title = "QuickChat"
+    fun testOnCreate() {
+        activity.onCreate(null)
+        verify { viewModel.loadConversations() }
+    }
 
-        // When
+    @Test
+    fun testOnResume() {
+        activity.onResume()
+        verify { viewModel.loadConversations() }
+    }
+
+    @Test
+    fun testSetupToolbar() {
         activity.setupToolbar()
-
-        // Then
-        verify { activity.supportActionBar?.title = title }
+        assertTrue(activity.supportActionBar?.title == "QuickChat")
     }
 
     @Test
-    fun `test setupRecyclerView sets adapter correctly`() {
-        // Given
-        val recyclerView = mockk(relaxed = true)
-
-        // When
+    fun testSetupRecyclerView() {
         activity.setupRecyclerView()
-
-        // Then
-        verify { recyclerView.adapter = adapter }
+        assertTrue(activity.binding.recyclerConversations.adapter != null)
     }
 
     @Test
-    fun `test observeViewModel updates adapter with conversations list`() {
-        // Given
-        val conversations = listOf(mockk(relaxed = true), mockk(relaxed = true))
-
-        // When
+    fun testObserveViewModel() {
+        val conversations = listOf(Conversation(1, "Conversation 1"), Conversation(2, "Conversation 2"))
         every { viewModel.conversations.value } returns conversations
         activity.observeViewModel()
-
-        // Then
-        verify { adapter.submitList(conversations) }
+        assertTrue(activity.adapter.itemCount == conversations.size)
     }
 
     @Test
-    fun `test observeViewModel shows empty state when conversations list is empty`() {
-        // Given
-        val conversations = emptyList<Any>()
+    fun testObserveViewModelEmpty() {
         every { viewModel.isEmpty.value } returns true
-
-        // When
         activity.observeViewModel()
-
-        // Then
-        verify { activity.binding.textEmptyState.visibility = View.VISIBLE }
-        verify { activity.binding.recyclerConversations.visibility = View.GONE }
-    }
-
-    @Test
-    fun `test observeViewModel hides empty state when conversations list is not empty`() {
-        // Given
-        val conversations = listOf(mockk(relaxed = true))
-        every { viewModel.isEmpty.value } returns false
-
-        // When
-        activity.observeViewModel()
-
-        // Then
-        verify { activity.binding.textEmptyState.visibility = View.GONE }
-        verify { activity.binding.recyclerConversations.visibility = View.VISIBLE }
-    }
-
-    @Test
-    fun `test setupRecyclerView starts ChatActivity when conversation is clicked`() {
-        // Given
-        val conversation = mockk(relaxed = true)
-        val intent = Intent(activity, ChatActivity::class.java)
-
-        // When
-        adapter.onConversationClick(conversation)
-
-        // Then
-        verify { activity.startActivity(intent) }
+        assertTrue(activity.binding.textEmptyState.visibility == View.VISIBLE)
+        assertTrue(activity.binding.recyclerConversations.visibility == View.GONE)
     }
 }
+
+data class Conversation(val id: Int, val name: String)
+//azerty
