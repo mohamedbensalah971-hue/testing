@@ -1,5 +1,7 @@
 package com.quickchat.app.util
 
+import com.quickchat.app.data.model.Message
+
 /**
  * Utility helpers to score and sort messages by simple priority rules.
  */
@@ -12,8 +14,8 @@ object MessagePriorityUtil {
     fun calculatePriority(message: Message): Int {
         var score = 0
 
-        // Unread messages are more important.
-        if (!message.isRead) score += 10
+        // Messages from others are more important than messages from me.
+        if (!message.isFromMe) score += 10
 
         // Slight boost for very recent messages (last 24h).
         val oneDayMs = 24L * 60L * 60L * 1000L
