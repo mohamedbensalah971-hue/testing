@@ -1,4 +1,7 @@
 package com.quickchat.app.util
+
+import com.quickchat.app.data.model.Message
+
 //testing
 /**
  * Utility for searching and filtering messages with various criteria.
@@ -12,14 +15,14 @@ object MessageSearchUtil {
      * @param messages List of messages to search in
      * @param query Search query (case-insensitive substring match)
      * @param maxResults Maximum number of results to return (default: 100)
-     * @param senderFilter Optional sender ID to filter by
+     * @param senderNameFilter Optional sender name to filter by
      * @return Filtered and sorted list of matching messages
      */
     fun searchMessages(
         messages: List<Message>,
         query: String,
         maxResults: Int = 100,
-        senderFilter: String? = null
+        senderNameFilter: String? = null
     ): List<Message> {
         if (query.isBlank()) return emptyList()
         
@@ -30,7 +33,7 @@ object MessageSearchUtil {
                 // Filter by query match
                 message.content.lowercase().contains(normalizedQuery) &&
                 // Filter by sender if specified
-                (senderFilter == null || message.senderId == senderFilter)
+                (senderNameFilter == null || message.senderName.lowercase().contains(senderNameFilter.lowercase()))
             }
             // Sort by timestamp descending (newest first)
             .sortedByDescending { it.timestamp }
@@ -73,29 +76,19 @@ object MessageSearchUtil {
     }
     
     /**
-     * Counts unread messages by sender in a conversation.
+     * Counts messages by sender in a conversation.
      * 
      * @param messages List of messages to analyze
      * @param conversationId ID of the conversation
-     * @return Map of sender ID to unread message count
+     * @return Map of sender name to message count
      */
-    fun countUnreadBySender(
+    fun countMessagesBySender(
         messages: List<Message>,
         conversationId: String
     ): Map<String, Int> {
         return messages
-            .filter { it.conversationId == conversationId && !it.isRead }
-            .groupingBy { it.senderId }
+            .filter { it.conversationId == conversationId }
+            .groupingBy { it.senderName }
             .eachCount()
     }
 }
-
-// Placeholder data classes (normally imported from model package)
-data class Message(
-    val id: String,
-    val conversationId: String,
-    val senderId: String,
-    val content: String,
-    val timestamp: Long,
-    val isRead: Boolean = false
-)

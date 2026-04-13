@@ -1,5 +1,7 @@
 package com.quickchat.app.util
 
+import com.quickchat.app.data.model.Message
+
 /**
  * Utility helpers for lightweight message analytics.
  */
@@ -16,10 +18,10 @@ object MessageStatsUtil {
     }
 
     /**
-     * Counts unread messages in the provided list.
+     * Counts messages by sender.
      */
-    fun countUnreadMessages(messages: List<Message>): Int {
-        return messages.count { !it.isRead }
+    fun countMessagesBySender(messages: List<Message>): Map<String, Int> {
+        return messages.groupingBy { it.senderName }.eachCount()
     }
 }
 //testing

@@ -1,19 +1,10 @@
 package com.quickchat.app.util
 
+import com.quickchat.app.data.model.Message
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
-
-data class Message(
-    val id: Long,
-    val conversationId: Long,
-    val senderId: Long,
-    val content: String,
-    val timestamp: Long,
-    val isRead: Boolean = false,
-    val attachmentCount: Int = 0
-)
 
 data class ConversationStats(
     val totalMessages: Int,
@@ -56,7 +47,8 @@ object ConversationAnalyzer {
             val currentMsg = sortedMessages[i]
             val previousMsg = sortedMessages[i - 1]
             
-            if (currentMsg.senderId != previousMsg.senderId) {
+            // Check if sender changed (different senderName or isFromMe status changed)
+            if (currentMsg.senderName != previousMsg.senderName || currentMsg.isFromMe != previousMsg.isFromMe) {
                 val timeDiff = currentMsg.timestamp - previousMsg.timestamp
                 if (timeDiff > 0 && timeDiff < 86400000) { // Less than 24 hours
                     responseTimes.add(timeDiff)
@@ -126,26 +118,23 @@ object ConversationAnalyzer {
 
     private fun calculateReadRate(messages: List<Message>): Double {
         if (messages.isEmpty()) return 0.0
-        
-        val readCount = messages.count { it.isRead }
-        return (readCount.toDouble() / messages.size) * 100.0
+        // Return percentage of messages from others (not isFromMe)
+        val messageCount = messages.count { !it.isFromMe }
+        return if (messages.isNotEmpty()) (messageCount.toDouble() / messages.size) * 100.0 else 0.0
     }
 
-    fun detectConversationPatterns(messages: List<Message>): Map<String, Any> {
+    fun detectConversationPatterns(messages: List<Message>): Map<String, Any> { 
         if (messages.isEmpty()) return emptyMap()
-        
+
         val patterns = mutableMapOf<String, Any>()
-        
+
         val hasBurst = detectBurstMessaging(messages)
-        val avgMessageLength = messages.map { it.content.length }.average()
-        val hasAttachments = messages.any { it.attachmentCount > 0 }
-        val uniqueSenders = messages.map { it.senderId }.distinct().size
-        
+        val avgMessageLength = messages.map { it.content.length }.average()     
+        val uniqueSenders = messages.map { it.senderName }.distinct().size        
+
         patterns["burst_messaging"] = hasBurst
         patterns["average_message_length"] = avgMessageLength.toInt()
-        patterns["has_attachments"] = hasAttachments
         patterns["participants_count"] = uniqueSenders
-        
         return patterns
     }
 
@@ -168,7 +157,7 @@ object ConversationAnalyzer {
         return false
     }
 
-    fun rankConversationsByActivity(conversationMessages: Map<Long, List<Message>>): List<Pair<Long, Int>> {
+    fun rankConversationsByActivity(conversationMessages: Map<String, List<Message>>): List<Pair<String, Int>> {
         return conversationMessages
             .mapValues { (_, messages) ->
                 val recentMessages = messages.filter { 
@@ -200,8 +189,8 @@ object ConversationAnalyzer {
         return score
     }
 
-    fun predictNextMessageTime(messages: List<Message>, senderId: Long): Long? {
-        val senderMessages = messages.filter { it.senderId == senderId }.sortedBy { it.timestamp }
+    fun predictNextMessageTime(messages: List<Message>, senderName: String): Long? {
+        val senderMessages = messages.filter { it.senderName == senderName }.sortedBy { it.timestamp }
         
         if (senderMessages.size < 3) return null
         
