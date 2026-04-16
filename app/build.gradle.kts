@@ -44,6 +44,10 @@ android {
 
     testOptions {
         unitTests.all {
+
+            unitTests.all {
+            useJUnitPlatform()   // ← obligatoire pour JUnit5
+        }
             it.extensions.configure(org.gradle.testing.jacoco.plugins.JacocoTaskExtension::class.java) {
                 isIncludeNoLocationClasses = true
                 excludes = listOf("jdk.internal.*")
@@ -72,6 +76,12 @@ dependencies {
     // Android instrumented tests
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+
+    testImplementation ('org.junit.jupiter:junit-jupiter-api:5.9.3')
+    testImplementation ('org.junit.jupiter:junit-jupiter-engine:5.9.3')
+    testImplementation ('io.mockk:mockk:1.13.8')
+    testImplementation ('org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3')
+    testRuntimeOnly ('org.junit.jupiter:junit-jupiter-engine:5.9.3')
 }
 
 tasks.register<JacocoReport>("jacocoTestReport") {

@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Assertions.*
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 
 class ConversationAnalyzerTest {
 
@@ -27,9 +26,9 @@ class ConversationAnalyzerTest {
     fun analyzeConversationReturnsConversationStatsWhenNotEmpty() {
         val message = Message(
             senderName = "John",
-            isFromMe = true,
             content = "Hello",
-            timestamp = Instant.now().toEpochMilli()
+            timestamp = Instant.now().toEpochMilli(),
+            isFromMe = true
         )
         messages.add(message)
         val result = ConversationAnalyzer.analyzeConversation(messages)
@@ -46,9 +45,9 @@ class ConversationAnalyzerTest {
     fun detectConversationPatternsReturnsPatternsWhenNotEmpty() {
         val message = Message(
             senderName = "John",
-            isFromMe = true,
             content = "Hello",
-            timestamp = Instant.now().toEpochMilli()
+            timestamp = Instant.now().toEpochMilli(),
+            isFromMe = true
         )
         messages.add(message)
         val result = ConversationAnalyzer.detectConversationPatterns(messages)
@@ -72,7 +71,7 @@ class ConversationAnalyzerTest {
 
 data class Message(
     val senderName: String,
-    val isFromMe: Boolean,
     val content: String,
-    val timestamp: Long
+    val timestamp: Long,
+    val isFromMe: Boolean
 )
