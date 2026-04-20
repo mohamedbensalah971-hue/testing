@@ -205,6 +205,4 @@ object ConversationAnalyzer {
         return lastMessageTime + averageInterval
     }
 }
-//testingspopsicles321
-//hello 
-//worldofgunsssaloalosssss
+//testfinal
