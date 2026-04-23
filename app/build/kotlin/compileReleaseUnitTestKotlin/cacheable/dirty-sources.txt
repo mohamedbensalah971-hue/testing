@@ -1,4 +1,0 @@
-C:\Users\Stayha\Desktop\test android\app\src\test\java\com\quickchat\app\data\model\MessageTest.kt
-C:\Users\Stayha\Desktop\test android\app\src\test\java\com\quickchat\app\data\model\ConversationTest.kt
-C:\Users\Stayha\Desktop\test android\app\src\test\java\com\quickchat\app\util\MessageSearchUtilTest.kt
-C:\Users\Stayha\Desktop\test android\app\src\test\java\com\quickchat\app\data\repository\ChatRepositoryTest.kt
