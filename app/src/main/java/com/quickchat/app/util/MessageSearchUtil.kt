@@ -92,4 +92,4 @@ object MessageSearchUtil {
             .eachCount()
     }
 }
-//test jacoco
+//test fares
