@@ -24,4 +24,4 @@ object MessageStatsUtil {
         return messages.groupingBy { it.senderName }.eachCount()
     }
 }
-//testingjacoco
+//testingjacoco yes
