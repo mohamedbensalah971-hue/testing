@@ -205,4 +205,4 @@ object ConversationAnalyzer {
         return lastMessageTime + averageInterval
     }
 }
-//testfinalfaresaloalofinalfinalfinal yassou
+//testfinalfaresaloalofinalfinalfinal yassou2.0
