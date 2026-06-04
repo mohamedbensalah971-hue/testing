@@ -56,3 +56,4 @@ class TimeFormatterTest {
         assertEquals(expected, result)
     }
 }
+
